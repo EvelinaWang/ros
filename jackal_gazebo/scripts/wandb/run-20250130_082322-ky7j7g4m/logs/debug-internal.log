@@ -1,0 +1,15 @@
+{"time":"2025-01-30T08:23:23.113144966Z","level":"INFO","msg":"stream: starting","core version":"0.19.5","symlink path":"/home/evelina/catkin_ws/src/jackal_simulator/jackal_gazebo/scripts/wandb/run-20250130_082322-ky7j7g4m/logs/debug-core.log"}
+{"time":"2025-01-30T08:23:25.030986284Z","level":"INFO","msg":"created new stream","id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.0310024Z","level":"INFO","msg":"stream: started","id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.031085108Z","level":"INFO","msg":"writer: Do: started","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.031160256Z","level":"INFO","msg":"handler: started","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.031180936Z","level":"INFO","msg":"sender: started","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.447149659Z","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-01-30T08:23:25.950365817Z","level":"INFO","msg":"stream: closing","id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:25.950405408Z","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-01-30T08:23:25.951156496Z","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-01-30T08:23:26.759163279Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-01-30T08:23:26.964124665Z","level":"INFO","msg":"handler: closed","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:26.964213189Z","level":"INFO","msg":"writer: Close: closed","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:26.964250897Z","level":"INFO","msg":"sender: closed","stream_id":"ky7j7g4m"}
+{"time":"2025-01-30T08:23:26.964378055Z","level":"INFO","msg":"stream: closed","id":"ky7j7g4m"}

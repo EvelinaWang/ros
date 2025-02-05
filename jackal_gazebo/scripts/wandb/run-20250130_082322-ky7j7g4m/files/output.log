@@ -1,0 +1,30 @@
+[34m[1mwandb[0m: [32m[41mERROR[0m artifact 'your_model:latest' not found in 'evelinawg-university-of-oxford/jaxnav-barn'
+Traceback (most recent call last):
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/apis/public/api.py", line 1214, in _artifact
+    artifact = wandb.Artifact._from_name(
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/sdk/artifacts/artifact.py", line 272, in _from_name
+    raise ValueError(f"artifact '{name}' not found in '{entity}/{project}'")
+ValueError: artifact 'your_model:latest' not found in 'evelinawg-university-of-oxford/jaxnav-barn'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/evelina/catkin_ws/src/jackal_simulator/jackal_gazebo/scripts/controller_node.py", line 19, in <module>
+    artifact = wandb.use_artifact('your_model:latest', type='model')
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 393, in wrapper_fn
+    return func(self, *args, **kwargs)
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 383, in wrapper
+    return func(self, *args, **kwargs)
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/sdk/wandb_run.py", line 3009, in use_artifact
+    artifact = public_api._artifact(type=type, name=name)
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/apis/normalize.py", line 71, in wrapper
+    raise CommError(message, err).with_traceback(sys.exc_info()[2])
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/apis/normalize.py", line 25, in wrapper
+    return func(*args, **kwargs)
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/apis/public/api.py", line 1214, in _artifact
+    artifact = wandb.Artifact._from_name(
+  File "/home/evelina/catkin_ws/ros_env/lib/python3.8/site-packages/wandb/sdk/artifacts/artifact.py", line 272, in _from_name
+    raise ValueError(f"artifact '{name}' not found in '{entity}/{project}'")
+wandb.errors.errors.CommError: artifact 'your_model:latest' not found in 'evelinawg-university-of-oxford/jaxnav-barn'
