@@ -37,5 +37,5 @@
     <arg name="joystick" value="$(arg joystick)" />
   </include>
 
-  <node name="robot_controller" pkg="jackal_gazebo" type="controller_node.py" output="screen"/>
+  <node name="robot_controller" pkg="jackal_gazebo" type="controller_test.py" output="screen"/>
 </launch>
