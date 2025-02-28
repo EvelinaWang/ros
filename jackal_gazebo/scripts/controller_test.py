@@ -9,9 +9,25 @@ from sensor_msgs.msg import LaserScan
 from sfl.train.train_utils import load_params
 from sfl.train.common.network import ActorCriticRNN, ScannedRNN
 from jaxmarl.environments.jaxnav import JaxNav
-
-
+import math
+from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseStamped
+from jaxmarl.environments.jaxnav.jaxnav_utils import wrap, cart2pol
+
+def odom_callback(msg):
+    """Update the robot's current position based on odometry data."""
+    global robot_x, robot_y, robot_yaw
+
+    # Extract Position (X, Y)
+    robot_x = msg.pose.pose.position.x
+    robot_y = msg.pose.pose.position.y
+
+    # Extract Orientation (Yaw from Quaternion)
+    q = msg.pose.pose.orientation
+    siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+    cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+    robot_yaw = math.atan2(siny_cosp, cosy_cosp)
+
 
 def send_goal(x, y):
     """Send a goal position to the move_base navigation system."""
@@ -60,7 +76,7 @@ def load_wandb_model():
     # Check if any parameters contain NaN
     for key, param in network_params.items():
         if isinstance(param, jnp.ndarray) and jnp.any(jnp.isnan(param)):
-            rospy.logerr(f"🚨 NaN detected in model parameter: {key} (model weights may be corrupted)")
+            rospy.logerr(f"NaN detected in model parameter: {key} (model weights may be corrupted)")
             return None, None, None  # If weights are corrupt, return None
 
     return network, network_params, config
@@ -72,6 +88,7 @@ def policy_inference(observation, hidden_state):
     obs, dones = observation  # Unpack tuple
     obs = jnp.array(obs, dtype=jnp.float32).reshape(1, 1, -1)
     dones = jnp.array(dones, dtype=jnp.bool_).reshape(1, 1,)
+
 
     rospy.loginfo(f"Policy Inference - Obs shape: {obs.shape}, Dones shape: {dones.shape}, Hidden state shape: {hidden_state.shape}")
     
@@ -112,30 +129,65 @@ def lidar_callback(data):
     """Process LIDAR scan and control the robot."""
     rospy.loginfo("Received LIDAR data!")
 
-    global carry_state
+    global carry_state, goal_x, goal_y,robot_x, robot_y,robot_yaw, model_linear_velocity,model_angular_velocity
 
-    # rospy.loginfo(f"Published command: hiddden_state={carry_state}")
+    rospy.loginfo(f"Published command: lidar_scan={data}")
 
     # Preprocess LIDAR data
     input_data = np.array(data.ranges, dtype=np.float32)
 
-    # ✅ Replace NaN and Inf values to prevent errors
+    # Replace NaN and Inf values to prevent errors
     input_data = np.nan_to_num(input_data, nan=0.0, posinf=6.0, neginf=0.0) #posinf value equals to the max_lidar_range=6
 
-    # ✅ Rescale LIDAR data to match expected model input size (205)
-    expected_size = 205  
+    # Rescale LIDAR data to match expected model input size (205)
+    expected_size = 200  
+
+    # step = len(input_data) // expected_size  # Step = 720 // 200 = 3
+    # input_data = input_data[::step][:expected_size]  # Slice and ensure size matches
+
     input_data = np.interp(
         np.linspace(0, 1, expected_size),  # New size: 205
         np.linspace(0, 1, len(input_data)),  # Original size: 720
         input_data  
     )
-    # input_data = jnp.array(input_data).reshape(1, -1)
+
     dones = jnp.zeros((1,), dtype=jnp.bool_)
 
-    # rospy.loginfo(f"Published command: input_data={input_data}")
+    try:
+        model_linear_velocity
+    except NameError:
+        model_linear_velocity = 0.0
+
+    try:
+        model_angular_velocity
+    except NameError:
+        model_angular_velocity = 0.0
+
+    # rospy.loginfo(f"Published command: angular={model_angular_velocity}")
+
+    rospy.loginfo(f"Published command: robot_x={robot_x}, robot_y={robot_y},goal_x={goal_x}, goal_y={goal_y}")
+
+    # Ensure LIDAR data is properly reshaped
+    input_data = input_data.reshape(1, 1, -1)  # Shape becomes (1,1,200)
+
+    # Compute extra 5 features
+    goal_distance = jnp.linalg.norm(jnp.array([goal_x, goal_y]) - jnp.array([robot_x, robot_y]))  # Distance to goal
+    goal_orientation = jnp.arctan2(goal_y - robot_y, goal_x - robot_x) - robot_yaw  # Angle to goal
+    goal_orientation = (goal_orientation + jnp.pi) % (2 * jnp.pi) - jnp.pi  # Normalize to [-pi, pi]
+
+    velocity_features = jnp.array([model_linear_velocity, model_angular_velocity], dtype=jnp.float32)  # Robot velocity (2 values)
+    goal_features = jnp.array([goal_distance, goal_orientation, 0.5], dtype=jnp.float32)  # Distance, orientation, and rew_lambda
+
+    # Combine velocity and goal features into a single array (5 values total)
+    extra_features = jnp.concatenate([velocity_features, goal_features]).reshape(1, 1, -1)  # Shape (1,1,5)
+
+    rospy.loginfo(f"Published command: extra_features={extra_features}")
+    # Concatenate LIDAR + extra features
+    obs = jnp.concatenate([input_data, extra_features], axis=-1)  # Final shape: (1,1,205)
+
 
     # Get action from policy
-    action, carry_state = policy_inference((input_data, dones), carry_state)
+    action, carry_state = policy_inference((obs, dones), carry_state)
     
     if action is None:
         rospy.logwarn("Policy inference returned None. Skipping this cycle.")
@@ -146,7 +198,7 @@ def lidar_callback(data):
         model_linear_velocity = float(action[0][0][0])  # Forward movement
         model_angular_velocity = float(action[0][0][1])  # Rotation
 
-            # ✅ Scale down velocities to slow down the robot
+            # Scale down velocities to slow down the robot
         LINEAR_SPEED_SCALING = 0.3  # Reduce linear speed (e.g., 30% of original)
         ANGULAR_SPEED_SCALING = 0.5  # Reduce angular speed (e.g., 50% of original)
 
@@ -175,6 +227,7 @@ network, network_params, config = load_wandb_model()
 
 # Set goal position for navigation
 goal_x, goal_y = -2.5, 9.5  # Change to desired goal position
+robot_x, robot_y, robot_yaw = -2.5, 2.5, 0
 send_goal(goal_x, goal_y)
 
 
@@ -186,8 +239,12 @@ carry_state = ScannedRNN.initialize_carry(batch_size, hidden_size)
 # Subscribe to LIDAR Data
 rospy.Subscriber("/front/scan", LaserScan, lidar_callback)
 
+rospy.Subscriber("/odometry/filtered", Odometry, odom_callback)
+
+
 # Keep Node Running
 rospy.spin()
+
 
 
 
